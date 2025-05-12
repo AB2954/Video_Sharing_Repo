@@ -1,5 +1,5 @@
 # Backend Project with NoSQL DB from youtube
 
-Clone the Project
+- Clone the Project
 
-Run command "npm install"
+- Run command "npm install"
