@@ -1,0 +1,27 @@
+# Ignore artifacts:
+/.vscode
+build/
+./dist
+node_modules/
+
+# Ignore logs:
+*.log
+
+# Ignore environment files:
+.env
+.env.*
+
+# Ignore package lock files:
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Ignore coverage reports:
+coverage/
+
+# Ignore specific files:
+*.min.js
+*.min.css
+
+# Ignore public assets:
+public/
