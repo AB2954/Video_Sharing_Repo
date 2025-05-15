@@ -121,4 +121,4 @@ dist
 
 
 # Text Files for Notes & References
-.txt
+*.txt
