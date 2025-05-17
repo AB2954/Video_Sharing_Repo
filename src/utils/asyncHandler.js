@@ -1,8 +1,10 @@
 const asyncHandler = (requestHandler) => {
-  Promise.resolve(requestHandler)
-  .catch(error=>{
-    next(error);
-  });
+  return (req,res,next)=>{
+    Promise.resolve(requestHandler(req,res,next))     // Always pass req,res,next in the requestHandler
+    .catch(error=>{
+      next(error);
+    });
+  }
 }
 
 export { asyncHandler };
