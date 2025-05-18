@@ -36,17 +36,17 @@ const userSchema = new Schema({
   },
   password:{
     type: String,
-    required: true,
+    required: [true, "Password field is mandatory."],
   },
   refreshToken:{
     type: String,
   }
 },{timestamps:true});
 
-userSchema.pre("save",async function(next){
+userSchema.pre("save", async function(next){
   if(!this.isModified("password")) return next();
 
-  await bcrypt.hash(this.password,10);
+  this.password = await bcrypt.hash(this.password,10);  // Always store the value in this.[parameter] if you are updating the value before saving.
   next();
 });
 

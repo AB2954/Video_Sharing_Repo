@@ -5,7 +5,7 @@ class ApiError extends Error{
     errors = [],
     stack,
   ){
-    super(message);
+    super(message); // Remove the "message" from super to send custom message.
     this.message = message;
     this.errors = errors;
     this.statusCode = statusCode;
