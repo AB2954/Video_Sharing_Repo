@@ -17,7 +17,7 @@ try {
       const decodedToken = jwt.decode(token,process.env.ACCESS_TOKEN_SECRET);
   
   //   2. Check if the user with the user_id exists in the DB.
-      const user = await User.findOne(decodedToken?._id).select("-password -refreshToken");
+      const user = await User.findById(decodedToken?._id).select("-password -refreshToken");
       
   //   3. if(user does not exist)
   //       3.a. Return an error "Invalid Access Token".

@@ -3,6 +3,7 @@ import { ApiError } from "./../utils/ApiError.js";
 import { ApiResponse } from "./../utils/ApiResponse.js";
 import { User } from "./../models/user.models.js";
 import { uploadOnCloudinary } from "./../utils/cloudinary.js";
+import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req,res)=>{
     // 1. Get user details from the frontend.
@@ -68,13 +69,13 @@ const registerUser = asyncHandler(async (req,res)=>{
 const loginUser = asyncHandler(async(req,res,next)=>{
 // 1. Get { username, email, password } from User/Frontend.
       const {username,email,password} = req.body;
-      if(!username || !email){
+      if(!username && !email){
         throw new ApiError(400,"Username or Email is required.")
       }
 // 2. Check if the username exists.
       const user = await User.findOne({
         $or: [{username},{email}]
-      });
+      }).select("-refreshToken");
       
 //   if(username does not exist)
 //     3.a. Return an error for "User not found".
@@ -84,7 +85,8 @@ const loginUser = asyncHandler(async(req,res,next)=>{
 //   else
 //     3.b. Check if the password hash matches the stored password.
 //       next(step 4).
-    const isPasswordValid = user.isPasswordMatch(password);
+      // console.log("user===>",user)
+    const isPasswordValid = user.isPasswordCorrect(password);
 
 //   if(password does not match)
 //     4.a. Return an error for "password did not match".
@@ -101,6 +103,8 @@ const loginUser = asyncHandler(async(req,res,next)=>{
       httpOnly:true,
       secure: true
     }
+    // -----Set password to undefined to remove from the user object.------
+    user.password = undefined;
     res.status(200)
     .cookie("accessToken",accessToken,cookieOptions)
     .cookie("refreshToken",refreshToken,cookieOptions)
@@ -131,10 +135,55 @@ const logoutUser = asyncHandler(async(req,res,next)=>{
     .clearCookie("accessToken",cookieOptions)
     .clearCookie("refreshToken",cookieOptions)
     .json({
-      message: "User logged out successfully."
+      message: `User ${user.username} logged out successfully.`
     })
-})
+});
 
+const renewAccessToken = asyncHandler(async(req,res)=>{
+// 1. Receive refresh token form user (cookie/body).
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+
+// 2. Check if the token is present.
+    if(!incomingRefreshToken){
+      throw new ApiError(401,"Refresh token is required.");
+    }
+// 3. if(token not present)
+//     3.a. return error "No token present."
+//    else
+//     3.b. Decode the token using jwt.
+    const decodedToken = jwt.verify(incomingRefreshToken,process.env.REFRESH_TOKEN_SECRET);
+
+// 4. Get the user from db based on the id 
+    const user = await User.findById(decodedToken?._id);
+
+// 5. if(user not found)
+//       return error "Invalid Token"
+      if(!user){
+        throw new ApiError(401, "Invalid Refresh Token");
+      }
+
+//6.  check incoming token with saved token.
+//    6.a. if(token does not match)
+//       return error "Token already expired or used."
+      if(user?.refreshToken !== incomingRefreshToken){
+        throw new ApiError(401,"Refresh Token expired.")
+      }
+//    else
+//       generate a new access & refresh token.
+      const {accessToken,refreshToken} = await generateAccessAndRefreshTokens(user._id);
+// 7. Send the refresh token back to user.
+      const cookieOptions = {
+        httpOnly: true,
+        secure: true
+      }
+      return res.status(200)
+      .cookie("accessToken",accessToken,cookieOptions)
+      .cookie("refreshToken",refreshToken,cookieOptions)
+      .json(new ApiResponse(200,{
+        accessToken,
+        refreshToken,
+      },"AccessToken renewed."))
+});
 
 async function generateAccessAndRefreshTokens(userId){
   const user = await User.findById(userId);
@@ -151,5 +200,6 @@ async function generateAccessAndRefreshTokens(userId){
 export { 
   registerUser, 
   loginUser,
-  logoutUser
+  logoutUser,
+  renewAccessToken
 };
